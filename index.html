@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI安全使用決策樹 v1.0</title>
+
+<style>
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  margin: 0;
+  background: #0f172a;
+  color: #e2e8f0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 20px;
+}
+
+.container {
+  max-width: 600px;
+  width: 100%;
+  background: #1e293b;
+  padding: 24px;
+  border-radius: 16px;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+}
+
+h1 {
+  font-size: 22px;
+  margin-bottom: 10px;
+}
+
+.question {
+  font-size: 18px;
+  margin: 20px 0;
+}
+
+.buttons {
+  display: flex;
+  gap: 10px;
+}
+
+button {
+  flex: 1;
+  padding: 12px;
+  border: none;
+  border-radius: 10px;
+  cursor: pointer;
+  font-size: 16px;
+  transition: 0.2s;
+}
+
+.yes {
+  background: #22c55e;
+}
+
+.no {
+  background: #ef4444;
+}
+
+button:hover {
+  opacity: 0.8;
+}
+
+.result {
+  margin-top: 20px;
+  padding: 15px;
+  border-radius: 10px;
+  display: none;
+}
+
+.safe { background: #065f46; }
+.warn { background: #78350f; }
+.danger { background: #7f1d1d; }
+
+.reset {
+  margin-top: 20px;
+  background: #334155;
+}
+</style>
+</head>
+
+<body>
+
+<div class="container">
+  <h1>🔐 AI安全使用決策樹</h1>
+  <div id="question" class="question"></div>
+
+  <div class="buttons">
+    <button class="yes" onclick="answer(true)">YES</button>
+    <button class="no" onclick="answer(false)">NO</button>
+  </div>
+
+  <div id="result" class="result"></div>
+  <button class="reset" onclick="resetFlow()">重新開始</button>
+</div>
+
+<script>
+const flow = [
+  {
+    q: "是否包含可識別個人或組織資訊？",
+    yes: "danger_stop",
+    no: 1
+  },
+  {
+    q: "是否為未公開 / 機密資料？",
+    yes: 2,
+    no: 2
+  },
+  {
+    q: "是否可以反推原始資料？",
+    yes: "danger_retry",
+    no: 3
+  },
+  {
+    q: "是否為完整資料（未切割）？",
+    yes: "warn_slice",
+    no: 4
+  },
+  {
+    q: "多輪對話是否可能拼湊完整資訊？",
+    yes: "warn_context",
+    no: 5
+  },
+  {
+    q: "是否需要長期保存在AI工具中？",
+    yes: "danger_store",
+    no: 6
+  },
+  {
+    q: "是否已完成脫敏處理（去識別＋模糊化）？",
+    yes: "safe",
+    no: "danger_stop"
+  }
+];
+
+let current = 0;
+
+function showQuestion() {
+  document.getElementById("result").style.display = "none";
+  document.getElementById("question").innerText = flow[current].q;
+}
+
+function answer(ans) {
+  const step = flow[current];
+
+  if (ans && typeof step.yes === "string") return showResult(step.yes);
+  if (!ans && typeof step.no === "string") return showResult(step.no);
+
+  current = ans ? step.yes : step.no;
+  showQuestion();
+}
+
+function showResult(type) {
+  const result = document.getElementById("result");
+  result.style.display = "block";
+
+  let text = "";
+
+  switch(type) {
+    case "safe":
+      result.className = "result safe";
+      text = "✅ 可安全使用 AI（低風險）";
+      break;
+
+    case "warn_slice":
+      result.className = "result warn";
+      text = "⚠️ 建議切片資料，避免完整上傳";
+      break;
+
+    case "warn_context":
+      result.className = "result warn";
+      text = "⚠️ 注意多輪對話可能拼湊資訊";
+      break;
+
+    case "danger_stop":
+      result.className = "result danger";
+      text = "🚫 禁止上傳，請先脫敏資料";
+      break;
+
+    case "danger_retry":
+      result.className = "result danger";
+      text = "🚫 可被還原，請重新處理資料";
+      break;
+
+    case "danger_store":
+      result.className = "result danger";
+      text = "🚫 不建議長期儲存在 AI 工具中";
+      break;
+  }
+
+  result.innerText = text;
+}
+
+function resetFlow() {
+  current = 0;
+  showQuestion();
+}
+
+showQuestion();
+</script>
+
+</body>
+</html>
